@@ -1,0 +1,15 @@
+﻿@route "/Report/Delete"
+@inject TollGateMaintenance.Models.TgmContext DB
+@functions {
+    public Guid id { get; set; }
+
+    public IActionResult OnGet() => NotFound();
+
+    public IActionResult OnPost()
+    {
+        var report = DB.Reports.Single(x => x.Id == id);
+        DB.Reports.Remove(report);
+        DB.SaveChanges();
+        return Content("ok");
+    }
+}

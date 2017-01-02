@@ -1,0 +1,141 @@
+﻿@route "/Report/Upload"
+@model Report
+@functions {
+    public IFormFile File { get; set; }
+
+    public IActionResult OnGet()
+    {
+        CheckRole();
+        ViewBag.Title = "上传word文档";
+        return View();
+    }
+}
+<script src="/signalr/hubs"></script>
+<script src="/js/tgm.signalr.js"></script>
+<style>
+    .col-md-2, .col-md-4, .col-md-10{
+        transition: all 0.2s linear;
+    }
+    .col-md-1 {
+        color: rgb(154, 154, 154);
+    }
+</style>
+
+<div class="col-md-10" style="display:none">
+    <div class="card">
+        <div class="header">
+            <h4 class="title">上传列表</h4>
+            <p class="category">您在这里可以对分析后的报表进行微调并保存。</p>
+        </div>
+        <div class="content table-responsive table-full-width">
+            <div id="lstDocuments" class="content">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="col-md-4 col-md-offset-4">
+    <div class="card">
+        <div class="header">
+            <h4 class="title">上传word文档</h4>
+            <p class="category">支持*.doc, *.docx。</p>
+        </div>
+        <div class="content">
+            <center class="pending">
+                <img id="uploadWord" src="/img/upload.png" />
+                <p style="color:#888">点击上面的上传图标以选择文档</p>
+            </center>
+            <center class="uploading">
+                <img id="uploading-img" src="/img/loading.gif" />
+                <p style="color:#888">文件正在上传，请勿关闭窗口</p>
+            </center>
+        </div>
+    </div>
+</div>
+
+
+<form id="frmAjaxUpload">
+    <input type="file" id="uploadFile" name="file" multiple />
+</form>
+
+<script>
+    $('#uploadWord').click(function () { $('#uploadFile').click(); });
+    $('#uploadFile').change(function () {
+        if (!$('#uploadFile').val())
+            return;
+        var formData = new FormData($('#frmAjaxUpload')[0]);
+        $('.pending').hide();
+        $('.uploading').show();
+        $.ajax({
+            url: '/Report/Upload/Word',
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            async: false,
+            cache: false,
+            contentType: false,
+            processData: false,
+            success: function (result) {
+                $('.pending').show();
+                $('.uploading').hide();
+                ShowList();
+                for (var i = 0; i < result.length; i++) {
+                    var html = '<div class="doc-outer" data-id="' + result[i].Id + '"><form action="/Report/Edit/' + result[i].Id + '"><div class="row doc-title"><div class="col-md-1">文件名</div><div class="col-md-3">' + result[i].FileName + '</div><div class="col-md-1">管理处</div><div class="col-md-3"><input type="text" name="management" class="form-control" value="' + result[i].Management + '" /></div><div class="col-md-1">收费站</div><div class="col-md-3"><input type="text" name="tollgate" class="form-control" value="' + result[i].TollGate + '" /></div></div></form><div class="progress-outer"><div class="progress"><div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div></div><p><label>系统正在分析此文档，请稍候。</label></p></div></div>';
+                    $('#lstDocuments').append(html);
+                }
+            },
+            error: function (returndata) {
+            }
+        });
+
+    });
+
+    function ShowList() {
+        $('.col-md-4').removeClass('col-md-offset-4');
+        $('.col-md-4').addClass('col-md-2');
+        $('.col-md-4').removeClass('col-md-4');
+        $('.col-md-10').slideDown();
+    }
+    function HideList() {
+        $('.col-md-10').hide();
+        $('.col-md-2').addClass('col-md-4');
+        $('.col-md-2').addClass('col-md-4');
+        $('.col-md-2').addClass('col-md-offset-4');
+        $('.col-md-4').removeClass('col-md-2');
+    }
+
+    function statusChanged(dom)
+    {
+        $(dom).parents('tr').removeClass("unsolved");
+        $(dom).parents('tr').removeClass("solved");
+        if ($(dom).val() == "true")
+            $(dom).parents('tr').addClass("solved");
+        else
+            $(dom).parents('tr').addClass("unsolved");
+    }
+
+    function removeIssue(dom)
+    {
+        if (confirm("您确定要删除这条信息吗？"))
+            $(dom).parents('tr').remove();
+    }
+
+    function addRow(dom)
+    {
+        $(dom).parents('table').children('tbody').append('<tr class="unsolved"><td><select name="issolved" class="form-control" onchange="statusChanged(this)"><option value="true">已解决</option><option value="false" selected>未解决</option></select></td><td><input type="text" name="device" class="form-control" /></td><td><input type="text" name="lane" class="form-control" /></td><td><input type="text" name="phenomenon" class="form-control" /></td><td><input type="text" name="solution" class="form-control" /></td><td>-<input type="hidden" name="raw"></td><td><a href="#" class="btn btn-danger btn-xs" onclick="removeIssue(this)">删除</a></td></tr>');
+    }
+
+    function editReport(id)
+    {
+        $.post('/Report/Edit/' + id, $('[data-id="' + id + '"]').find('form').serialize(), function () {
+            $('[data-id="' + id + '"]').slideUp();
+            popMsg('报表保存成功');
+            setTimeout(function () {
+                $('[data-id="' + id + '"]').remove();
+                if ($('.doc-outer').length == 0) {
+                    HideList();
+                }
+            }, 300);
+        });
+    }
+</script>

@@ -1,0 +1,15 @@
+﻿@route "/User/Logout"
+@functions {
+    public IActionResult OnGet()
+    {
+        return NotFound();
+    }
+
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPost()
+    {
+        CheckRole();
+        await Sign.SignOutAsync();
+        return Redirect("/User/Login");
+    }
+}

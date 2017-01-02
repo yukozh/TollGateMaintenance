@@ -1,0 +1,38 @@
+﻿@route "/Report/Aggregate"
+@inject TollGateMaintenance.Models.TgmContext DB
+@functions {
+    public string management { get; set; }
+
+    public IActionResult OnGet()
+    {
+        CheckRole();
+        return View();
+    }
+}
+
+@{
+    Layout = null;
+    var data = DB.Reports
+        .Where(x => x.Management == management)
+        .GroupBy(x => x.Management)
+        .Select(x => new
+        {
+            Management = x.Key,
+            TotalDevice = x.Sum(y => y.Issues.Object.Count()),
+            FixedDevice = x.Sum(y => y.Issues.Object.Count(z => z.IsSolved)),
+            Unsolved = x.Sum(y => y.Issues.Object.Count(z => !z.IsSolved))
+        });
+}
+
+@foreach (var x in data)
+{
+    <tr data-management="@x.Management" data-unsolved="@x.Unsolved">
+        <td colspan="2">@x.Management <input type="hidden" name="aggregate_management" value="@x.Management" /></td>
+        <td>@x.TotalDevice <input type="hidden" name="aggregate_total_device" value="@x.TotalDevice" /></td>
+        <td><input type="text" class="form-control" name="aggregate_total_software" value="0" /></td>
+        <td>@x.FixedDevice <input type="hidden" name="aggregate_fixed_device" value="@x.FixedDevice" /></td>
+        <td><input type="text" class="form-control" name="aggregate_fixed_software" value="0" /></td>
+        <td><input type="text" class="form-control" name="aggregate_unsolved_emergency" value="0" onchange="EmergencyChanged(this)" onkeyup="EmergencyChanged(this)" /></td>
+        <td><span class="txt-other-unsolved">@x.Unsolved</span><input type="hidden" name="aggregate_unsolved_other" value="@x.Unsolved" /></td>
+    </tr>
+}

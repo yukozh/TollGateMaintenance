@@ -1,0 +1,25 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:35184/",
+      "sslPort": 0
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "TollGateMaintenance": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_URLS": "http://*:5000"
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+﻿@route "/User/Login"
+@{ 
+    Layout = null;
+}
+@functions {
+    public string Username { get; set; }
+
+    public string Password { get; set; }
+
+    public IActionResult OnGet()
+    {
+        ViewBag.Title = "管理员登录";
+        return View();
+    }
+
+    public async Task<IActionResult> OnPost()
+    {
+        var result = await Sign.PasswordSignInAsync(Username, Password, true, false);
+        if (result.Succeeded)
+            return Redirect("/");
+        return Content("用户名或密码错误，请返回重试！");
+    }
+}
+
+<!DOCTYPE html>
+<!--[if lt IE 7 ]> <html lang="en" class="ie6 ielt8"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="en" class="ie7 ielt8"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="en" class="ie8"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+ <!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+    <title>管理员登录</title>
+    <link rel="stylesheet" type="text/css" href="/css/login.css" />
+</head>
+<body>
+    <div class="container">
+        <section id="content">
+            <form method="post">
+                <h1>管理员登录</h1>
+                <div>
+                    <input type="text" placeholder="Username" required="" name="username" />
+                </div>
+                <div>
+                    <input type="password" placeholder="Password" required="" name="password" />
+                </div>
+                <div>
+                    <input type="submit" value="登录" />
+                </div>
+            </form><!-- form -->
+        </section><!-- content -->
+    </div><!-- container -->
+</body>
+</html>

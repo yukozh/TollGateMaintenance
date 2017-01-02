@@ -1,0 +1,100 @@
+﻿@route "/Report/Export/{id:Guid}"
+@model Report
+@inject TollGateMaintenance.Models.TgmContext DB
+@{
+    Layout = null;
+}
+@functions {
+    public Guid id { get; set; }
+
+    public IActionResult OnGet()
+    {
+        CheckRole();
+
+        var report = DB.Reports.Single(x => x.Id == id);
+        ViewBag.Title = report.Management + " - " + report.TollGate;
+        Context.Response.ContentType = "application/force-download";
+        Context.Response.Headers.Add("content-disposition", "attachment; filename=" + id + ".xls");
+        return View(report);
+    }
+}
+
+<html xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!--[if gte mso 9]><xml>
+    <x:ExcelWorkbook>
+    <x:ExcelWorksheets>
+    <x:ExcelWorksheet>
+    <x:Name>Report Data</x:Name>
+    <x:WorksheetOptions>
+    <x:Print>
+    <x:ValidPrinterInfo/>
+    </x:Print>
+    </x:WorksheetOptions>
+    </x:ExcelWorksheet>
+    </x:ExcelWorksheets>
+    </x:ExcelWorkbook>
+    </xml>
+    <![endif]-->
+</head>
+<body>
+    <table>
+        <tr>
+            <td style="font-size: 48px; text-align: center" colspan="4">@ViewBag.Title</td>
+        </tr>
+        <tr></tr>
+        <tr>
+            <td style="font-size: 36px; text-align: center" colspan="4">故障设备一览表</td>
+        </tr>
+        <tr class="bordered">
+            <td style="border:1px solid #000">设备名称</td>
+            <td style="border:1px solid #000">车道/位置</td>
+            <td style="border:1px solid #000">维修前</td>
+            <td style="border:1px solid #000">备注</td>
+        </tr>
+        @foreach (var x in Model.Issues.Object)
+        {
+            <tr class="bordered">
+                <td style="border:1px solid #000">@x.Name</td>
+                <td style="border:1px solid #000">@x.Lane</td>
+                <td style="border:1px solid #000">@x.Phenomenon</td>
+                <td style="border:1px solid #000">@x.Solution</td>
+            </tr>
+        }
+        <tr></tr>
+        <tr>
+            <td style="font-size: 36px; text-align: center" colspan="5">维护汇总表</td>
+        </tr>
+        <tr class="bordered">
+            <td style="border:1px solid #000">设备名称</td>
+            <td style="border:1px solid #000">维修前故障设备</td>
+            <td style="border:1px solid #000">维修后故障设备</td>
+            <td style="border:1px solid #000">维修后修复设备</td>
+            <td style="border:1px solid #000">备注</td>
+        </tr>
+        @foreach (var x in Model.Issues.Object.GroupBy(y => y.Name))
+        {
+            var tmp = x.Select(y => y.Phenomenon + "，" + y.Solution).Distinct().ToArray();
+            for (var i = 0; i < tmp.Length; i++)
+            {
+                tmp[i] = string.Join("、", x.Where(y => y.Phenomenon + "，" + y.Solution == tmp[i]).Select(y => y.Lane)) + tmp[i];
+            }
+            <tr class="bordered">
+                <td style="border:1px solid #000">@x.Key</td>
+                <td style="border:1px solid #000">@x.Count()</td>
+                <td style="border:1px solid #000">@x.Count(y => !y.IsSolved)</td>
+                <td style="border:1px solid #000">@x.Count(y => y.IsSolved)</td>
+                <td style="border:1px solid #000">@string.Join("；", tmp)</td>
+            </tr>
+        }
+        <tr>
+            <td style="border:1px solid #000">合计</td>
+            <td style="border:1px solid #000">@Model.Issues.Object.Count()</td>
+            <td style="border:1px solid #000">@Model.Issues.Object.Count(x => !x.IsSolved)</td>
+            <td style="border:1px solid #000">@Model.Issues.Object.Count(x => x.IsSolved)</td>
+            <td style="border:1px solid #000"></td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,261 @@
+﻿@route "/Report/Generate"
+@inject TollGateMaintenance.Models.TgmContext DB
+@functions {
+    public IEnumerable<string> Managements { get; set; }
+    public string[] group_managements { get; set; }
+    public int[] group_total { get; set; }
+    public int[] group_finished { get; set; }
+    public string description { get; set; }
+    public string[] aggregate_management { get; set; }
+    public int[] aggregate_total_device { get; set; }
+    public int[] aggregate_total_software { get; set; }
+    public int[] aggregate_fixed_device { get; set; }
+    public int[] aggregate_fixed_software { get; set; }
+    public int[] aggregate_unsolved_emergency { get; set; }
+    public int[] aggregate_unsolved_other { get; set; }
+
+    public IActionResult OnGet()
+    {
+        CheckRole();
+        ViewBag.Title = "生成汇总报表";
+        Managements = DB.Reports.Select(x => x.Management).Distinct();
+        return View();
+    }
+
+    public IActionResult OnPost()
+    {
+        CheckRole();
+        Context.Response.ContentType = "application/force-download";
+        Context.Response.Headers.Add("content-disposition", "attachment; filename=report.doc");
+        return View();
+    }
+}
+@if (IsGet)
+{
+    <div class="modal fade" id="modalManagementSelector" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">关闭</span></button>
+                    <h4 class="modal-title" id="myModalLabel">选择管理处</h4>
+                </div>
+                <div class="modal-body row">
+                    @foreach (var x in Managements)
+                    {
+                        <div class="col-md-3">
+                            <label>
+                                <input type="checkbox" class="chk-management" value="@x" />
+                                <span>@x</span>
+                            </label>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="btnManagementsOk">确定 </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form method="post" class="card">
+        <div class="header">
+            <h4 class="title">@ViewBag.Title</h4>
+            <p class="category">本页中展示了该站已解决、未解决问题</p>
+        </div>
+        <div class="content">
+            <table class="table table-bordered">
+                <tr class="table-header">
+                    <td colspan="8">一、各组维护进度</td>
+                </tr>
+                <tr class="group">
+                    <td>组别</td>
+                    <td>需维护站点总数</td>
+                    <td>已完成维护的站点数</td>
+                    <td>剩余未维护的站点数</td>
+                    <td colspan="3">已维护站点所属管理处</td>
+                    <td>操作</td>
+                </tr>
+                <tr class="group-footer table-header">
+                    <td colspan="8">
+                        <a href="javascript:AddRow();" class="btn btn-sm btn-info">添加组</a>
+                    </td>
+                </tr>
+                <tr class="table-header">
+                    <td colspan="8">二、硬/软件维护情况汇总</td>
+                </tr>
+                <tr>
+                    <td colspan="8">
+                        <textarea style="height: 120px;" class="form-control" name="description" placeholder="维护情况概述"></textarea>
+                    </td>
+                </tr>
+                <tr class="table-header">
+                    <td rowspan="2" colspan="2">管理处名称</td>
+                    <td rowspan="2">故障设备总数</td>
+                    <td rowspan="2">故障软件总数</td>
+                    <td rowspan="2">修复硬件数量</td>
+                    <td rowspan="2">修复软件数量</td>
+                    <td colspan="2">未修复</td>
+                </tr>
+                <tr class="table-header">
+                    <td>应急维护</td>
+                    <td>其他维护</td>
+                </tr>
+                <tr class="aggregate-footer table-header">
+                    <td colspan="8"><input type="submit" value="生成报表" class="btn btn-primary" /></td>
+                </tr>
+            </table>
+        </div>
+    </form>
+    <script>
+    var currentGroup;
+
+    function ResetAutoNum() {
+        var nums = $('.auto-num');
+        for (var i = 0; i < nums.length; i++) {
+            $(nums[i]).text(i + 1);
+        }
+    }
+
+    function AddRow() {
+        $('.group-footer').before('<tr class="group-item"><td class="auto-num"></td><td><input type="text" name="group_total" class="form-control" onkeyup="GroupChanged(this)" onchange="GroupChanged(this)" /></td><td><input type="text" name="group_finished" class="form-control" onkeyup="GroupChanged(this)" onchange="GroupChanged(this)" /></td><td class="group-left">0</td><td colspan="3"><span class="group-managements"></span><input type="hidden" name="group_managements" value="[]" /><a href="javascript:;" onclick="SetManagements(this)" class="btn btn-xs btn-info">修改</a></td><td><a href="javascript:;" onclick="removeGroup(this)" class="btn btn-xs btn-danger">删除</a></td></tr>');
+        ResetAutoNum();
+    }
+
+    function removeGroup(dom) {
+        var managements = JSON.parse($(dom).parents('tr').find('input[name="group_managements"]').val());
+        for (var i = 0; i < managements.length; i++) {
+            $('tr[data-management="' + managements[i] + '"]').remove();
+        }
+        $(dom).parents('tr').remove();
+        ResetAutoNum();
+    }
+
+    function SetManagements(dom) {
+        currentGroup = $(dom).parents('td');
+        var selected = JSON.parse(currentGroup.children('input[type="hidden"]').val());
+        $('.chk-management').removeAttr('checked');
+        for (var i = 0; i < selected.length; i++) {
+            $('input[type="checkbox" value="' + selected[i] + '"]').attr('checked', 'true');
+        }
+        $('#modalManagementSelector').modal('show');
+    }
+
+    $('#btnManagementsOk').click(function () {
+        var ret = [];
+        var str = "";
+        var chks = $('input[type="checkbox"]:checked');
+        for (var i = 0; i < chks.length; i++) {
+            ret.push($(chks[i]).val());
+            str += $(chks[i]).val() + "、";
+        }
+        var old = JSON.parse(currentGroup.children('input[type="hidden"]').val());
+        for (var i = 0; i < ret.length; i++) {
+            if (!old.some(function (x) { return x == ret[i] })) { // 如果之前没有选择
+                $.get('/Report/Aggregate', { management: ret[i] }, function (data) {
+                    $('.aggregate-footer').before(data);
+                });
+            }
+        }
+        for (var i = 0; i < old.length; i++) {
+            if (!ret.some(function (x) { return x == old[i] })) { // 如果新选择的刨除了之前选择过的
+                $('tr[data-management="' + old[i] + '"]').remove();
+            }
+        }
+        str = str.substr(0, str.length - 1);
+        currentGroup.children('.group-managements').text(str);
+        currentGroup.children('input[type="hidden"]').val(JSON.stringify(ret));
+        $.get('/Report/Count', { managements: JSON.stringify(ret) }, function (cnt) {
+            currentGroup.parents('tr').find('input[name="group_finished"]').val(cnt);
+            currentGroup.parents('tr').find('input[name="group_total"]').val(cnt);
+        });
+        $('#modalManagementSelector').modal('hide');
+    });
+
+    function GroupChanged(dom) {
+        var tr = $(dom).parents('td').parents('tr');
+        var total = tr.find('input[name="group_total"]').val();
+        var finished = tr.find('input[name="group_finished"]').val();
+        var left = total - finished;
+        tr.children('.group-left').text(left);
+    }
+
+    function EmergencyChanged(dom) {
+        var em = $(dom).val();
+        var total = $(dom).parents('tr').attr('data-unsolved');
+        var other = total - em;
+        $(dom).parents('tr').find('input[name="aggregate_unsolved_other"]').val(other);
+        $(dom).parents('tr').find('.txt-other-unsolved').text(other);
+    }
+    </script>
+}
+else
+{
+    Layout = null;
+    <html xmlns:x="urn:schemas-microsoft-com:office:word">
+    <head>
+        <META http-equiv="Content-Type" content="text/html; charset=utf-8">
+    </head>
+    <body>
+        <h2 style="text-align:center">季维护汇报表（截至@(DateTime.Now)）</h2>
+        <table style="width: 100%; border-collapse: collapse; text-align:center">
+            <tr>
+                <td style="border:1px solid #666; padding: 5px" colspan="7">一、各组维护进度</td>
+            </tr>
+            <tr>
+                <td style="border:1px solid #666; padding: 5px">组别</td>
+                <td style="border:1px solid #666; padding: 5px">需维护站点总数</td>
+                <td style="border:1px solid #666; padding: 5px">已完成维护的站点数</td>
+                <td style="border:1px solid #666; padding: 5px">剩余未维护的站点数</td>
+                <td style="border:1px solid #666; padding: 5px" colspan="3">已维护站点所属管理处</td>
+            </tr>
+            @for(var i = 0; i < group_managements.Count(); i ++)
+            { 
+                <tr>
+                    <td style="border:1px solid #666; padding: 5px">@(i + 1)</td>
+                    <td style="border:1px solid #666; padding: 5px">@group_total[i]</td>
+                    <td style="border:1px solid #666; padding: 5px">@group_finished[i]</td>
+                    <td style="border:1px solid #666; padding: 5px">@(group_total[i] - group_finished[i])</td>
+                    <td style="border:1px solid #666; padding: 5px" colspan="3">@(string.Join("、", Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(group_managements[i])))</td>
+                </tr>
+            }
+            <tr>
+                <td style="border:1px solid #666; padding: 5px" colspan="7">二、硬/软件维护情况汇总</td>
+            </tr>
+            <tr><td style="border:1px solid #666; padding: 5px; text-align: left" colspan="7">@description</td></tr>
+            <tr>
+                <td style="border:1px solid #666; padding: 5px" rowspan="2">管理处名称</td>
+                <td style="border:1px solid #666; padding: 5px" rowspan="2">故障设备总数</td>
+                <td style="border:1px solid #666; padding: 5px" rowspan="2">故障软件总数</td>
+                <td style="border:1px solid #666; padding: 5px" rowspan="2">修复硬件数量</td>
+                <td style="border:1px solid #666; padding: 5px" rowspan="2">修复软件数量</td>
+                <td style="border:1px solid #666; padding: 5px" colspan="2">未修复</td>
+            </tr>
+            <tr>
+                <td style="border:1px solid #666; padding: 5px">应急维护</td>
+                <td style="border:1px solid #666; padding: 5px">其他维护</td>
+            </tr>
+            @for (var i = 0; i < aggregate_management.Count(); i++)
+            {
+            <tr>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_management[i]</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_total_device[i]</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_total_software[i]</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_fixed_device[i]</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_fixed_software[i]</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_unsolved_emergency[i]</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_unsolved_other[i]</td>
+            </tr>
+            }
+            <tr>
+                <td style="border:1px solid #666; padding: 5px">合计</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_total_device.Sum()</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_total_software.Sum()</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_fixed_device.Sum()</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_fixed_software.Sum()</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_unsolved_emergency.Sum()</td>
+                <td style="border:1px solid #666; padding: 5px">@aggregate_unsolved_other.Sum()</td>
+            </tr>
+        </table>
+    </body>
+</html>
+}

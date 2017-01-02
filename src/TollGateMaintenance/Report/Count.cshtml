@@ -1,0 +1,12 @@
+﻿@route "/Report/Count"
+@inject TollGateMaintenance.Models.TgmContext DB
+@functions {
+    public string Managements { get; set; }
+
+    public IActionResult OnGet()
+    {
+        CheckRole();
+        var arr = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(Managements);
+        return Content(DB.Reports.Where(x => arr.Contains(x.Management)).Count().ToString());
+    }
+}

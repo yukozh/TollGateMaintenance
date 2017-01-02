@@ -1,0 +1,42 @@
+﻿@route "/Report/Upload/Word"
+@using System.Collections.Concurrent
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.Extensions.DependencyInjection
+@using TollGateMaintenance.Hubs
+@inject TollGateMaintenance.Models.TgmContext DB
+@inject System.IServiceProvider serviceProvider
+@functions {
+    public IFormFile[] File { get; set; }
+
+    public IActionResult OnPost()
+    {
+        var ret = new ConcurrentBag<Report>();
+        Parallel.ForEach(File, x =>
+        {
+            var y = WordToHtml.Parse(x);
+            y.Id = Guid.NewGuid();
+            y.Management = ReportHelper.GetManagement(y.RawText);
+            y.TollGate = ReportHelper.GetTollGate(y.RawText);
+            ret.Add(y);
+        });
+        DB.Reports.AddRange(ret);
+        DB.SaveChanges();
+        Parallel.ForEach(ret, x =>
+        {
+            using (var serviceScope = serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope())
+            {
+                Task.Run(async () =>
+                {
+                    var context = serviceScope.ServiceProvider.GetService<TgmContext>();
+                    var hub = serviceScope.ServiceProvider.GetService<IHubContext<TgmHub>>();
+                    var y = context.Reports.Single(z => z.Id == x.Id);
+                    y.Issues = Newtonsoft.Json.JsonConvert.SerializeObject(await NlpHelper.Analyze(ReportHelper.GetSolvedIssues(x.RawText), ReportHelper.GetUnsolvedIssues(x.RawText), hub, y.Id));
+                    await context.SaveChangesAsync();
+                    hub.Clients.All.OnAnalyzeFinished(y.Id);
+                });
+            }
+        });
+        return Content(Newtonsoft.Json.JsonConvert.SerializeObject(ret));
+    }
+}

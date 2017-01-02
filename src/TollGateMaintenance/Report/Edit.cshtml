@@ -1,0 +1,101 @@
+﻿@route "/Report/Edit/{id:Guid}"
+@using System.Collections.Concurrent;
+@model Report
+@inject TollGateMaintenance.Models.TgmContext DB
+@functions {
+    public Guid id { get; set; }
+    public string management { get; set; }
+    public string tollgate { get; set; }
+    public bool[] issolved { get; set; }
+    public string[] device { get; set; }
+    public string[] lane { get; set; }
+    public string[] phenomenon { get; set; }
+    public string[] solution { get; set; }
+    public string[] raw { get; set; }
+
+    public IActionResult OnGet()
+    {
+        var report = DB.Reports.Single(x => x.Id == id);
+        ViewBag.Title = report.Management + report.TollGate;
+        return View(report);
+    }
+
+    public IActionResult OnPost()
+    {
+        var report = DB.Reports.Single(x => x.Id == id);
+        var newIssues = new ConcurrentBag<DeviceIssue>();
+        report.Management = management;
+        report.TollGate = tollgate;
+        if (issolved != null)
+        {
+            Parallel.For(0, issolved.Length, i =>
+            {
+                newIssues.Add(new DeviceIssue { Name = device[i], Lane = lane[i], Phenomenon = phenomenon[i], Solution = solution[i], IsSolved = issolved[i], Raw = raw[i] });
+            });
+            report.Issues = Newtonsoft.Json.JsonConvert.SerializeObject(newIssues);
+        }
+        else
+        {
+            report.Issues = "[]";
+        }
+        DB.SaveChanges();
+        return Content("ok");
+    }
+}
+<style>
+    .doc-outer {
+        border-top: 1px solid #ccc;
+        margin: 0;
+    }
+</style>
+<div class="col-md-12">
+    <div class="card">
+        <div class="header">
+            <h4 class="title">@ViewBag.Title</h4>
+            <p class="category">您在这里可以对分析后的报表进行微调并保存。</p>
+        </div>
+        <div class="content table-responsive table-full-width">
+            <form action="/Report/Edit/@Model.Id" method="post" id="frmEdit">
+                <div class="doc-outer" data-id="b5faba54-b537-4d05-bd49-01056b4d3efb">
+                    <div class="row doc-title">
+                        <div class="col-md-1">文件名</div><div class="col-md-3">@Model.FileName</div>
+                        <div class="col-md-1">管理处</div><div class="col-md-3">
+                            <input type="text" name="management" class="form-control" value="@Model.Management">
+                        </div>
+                        <div class="col-md-1">收费站</div>
+                        <div class="col-md-3"><input type="text" name="tollgate" class="form-control" value="@Model.TollGate"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    $.get('/Report/Issues/@Model.Id', {}, function (data) { 
+        $('.doc-outer').append(data);
+    });
+
+    function statusChanged(dom) {
+        $(dom).parents('tr').removeClass("unsolved");
+        $(dom).parents('tr').removeClass("solved");
+        if ($(dom).val() == "true")
+            $(dom).parents('tr').addClass("solved");
+        else
+            $(dom).parents('tr').addClass("unsolved");
+    }
+
+    function removeIssue(dom) {
+        if (confirm("您确定要删除这条信息吗？"))
+            $(dom).parents('tr').remove();
+    }
+
+    function addRow(dom) {
+        $(dom).parents('table').children('tbody').append('<tr class="unsolved"><td><select name="issolved" class="form-control" onchange="statusChanged(this)"><option value="true">已解决</option><option value="false" selected>未解决</option></select></td><td><input type="text" name="device" class="form-control" /></td><td><input type="text" name="lane" class="form-control" /></td><td><input type="text" name="phenomenon" class="form-control" /></td><td><input type="text" name="solution" class="form-control" /></td><td>-<input type="hidden" name="raw"></td><td><a href="#" class="btn btn-danger btn-xs" onclick="removeIssue(this)">删除</a></td></tr>');
+    }
+
+    function editReport(id) {
+        $.post('/Report/Edit/' + id, $('#frmEdit').serialize(), function () {
+            popMsg('报表保存成功');
+        });
+    }
+</script>

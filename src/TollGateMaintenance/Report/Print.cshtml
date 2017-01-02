@@ -1,0 +1,182 @@
+﻿@route "/Report/Print/{id:Guid}"
+@model Report
+@inject TollGateMaintenance.Models.TgmContext DB
+@{
+    Layout = null;
+}
+@functions {
+    public Guid id { get; set; }
+
+    public IActionResult OnGet()
+    {
+        CheckRole();
+        var report = DB.Reports.Single(x => x.Id == id);
+        ViewBag.Title = report.Management + " - " + report.TollGate;
+
+        //var solved = report.Issues.Object
+        //    .Where(x => x.IsSolved)
+        //    .GroupBy(x => x.Name)
+        //    .Select(x => new { Name = x.Key, Count = x.Count() });
+        //ViewBag.SolvedStatistics = Newtonsoft.Json.JsonConvert.SerializeObject(new { labels = solved.Select(x => x.Name), series = solved.Select(x => x.Count) });
+
+        //var unsolved = report.Issues.Object
+        //    .Where(x => !x.IsSolved)
+        //    .GroupBy(x => x.Name)
+        //    .Select(x => new { Name = x.Key, Count = x.Count() });
+        //ViewBag.UnsolvedStatistics = Newtonsoft.Json.JsonConvert.SerializeObject(new { labels = unsolved.Select(x => x.Name), series = unsolved.Select(x => x.Count) });
+
+        var issues = report.Issues.Object
+            .GroupBy(x => x.Name)
+            .Select(x => new { Name = x.Key, UnsolvedCount = x.Where(y => !y.IsSolved).Count(), Count = x.Count() });
+        ViewBag.GeneralStatistics = Newtonsoft.Json.JsonConvert.SerializeObject(new { labels = issues.Select(x => x.Name), series = new[] { issues.Select(x => x.Count), issues.Select(x => x.UnsolvedCount) } });
+
+        return View(report);
+    }
+}
+<html>
+<head>
+    <link href="/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/css/animate.min.css" rel="stylesheet" />
+    <link href="/css/light-bootstrap-dashboard.css" rel="stylesheet" />
+    <link href="/css/demo.css" rel="stylesheet" />
+    <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
+    <link href="/css/pe-icon-7-stroke.css" rel="stylesheet" />
+    <link href="/css/datetimepicker.css" rel="stylesheet" />
+
+    <script src="/js/jquery-1.10.2.js" type="text/javascript"></script>
+    <script src="/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="/js/bootstrap-checkbox-radio-switch.js"></script>
+    <script src="/js/chartist.min.js"></script>
+    <script src="/js/bootstrap-notify.js"></script>
+    <script src="/js/light-bootstrap-dashboard.js"></script>
+    <script src="/js/jquery.datetimepicker.js"></script>
+    <script src="/js/moment.js"></script>
+
+</head>
+<body>
+
+    <style>
+        body, table, div {
+            font-size: 12px !important;
+        }
+    </style>
+
+    <h2>@ViewBag.Title</h2>
+    <div>
+        <h4>故障设备一览表</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>设备名称</th>
+                    <th>车道/位置</th>
+                    <th>维修前</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var x in Model.Issues.Object)
+                {
+                    <tr>
+                        <td>@x.Name</td>
+                        <td>@x.Lane</td>
+                        <td>@x.Phenomenon</td>
+                        <td>@x.Solution</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div>
+        <h4>维护汇总表</h4>
+        <table class="table">
+            <colgroup>
+                <col />
+                <col />
+                <col />
+                <col />
+                <col style="width: 40%" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>设备名称</th>
+                    <th>维修前故障设备</th>
+                    <th>维修后故障设备</th>
+                    <th>维修后修复设备</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var x in Model.Issues.Object.GroupBy(y => y.Name))
+                {
+                    var tmp = x.Select(y => y.Phenomenon + "，" + y.Solution).Distinct().ToArray();
+                    for (var i = 0; i < tmp.Length; i++)
+                    {
+                        tmp[i] = string.Join("、", x.Where(y => y.Phenomenon + "，" + y.Solution == tmp[i]).Select(y => y.Lane)) + tmp[i];
+                    }
+                    <tr>
+                        <td>@x.Key</td>
+                        <td>@x.Count()</td>
+                        <td>@x.Count(y => !y.IsSolved)</td>
+                        <td>@x.Count(y => y.IsSolved)</td>
+                        <td>@string.Join("；", tmp)</td>
+                    </tr>
+                }
+                <tr>
+                    <td>合计</td>
+                    <td>@Model.Issues.Object.Count()</td>
+                    <td>@Model.Issues.Object.Count(x => !x.IsSolved)</td>
+                    <td>@Model.Issues.Object.Count(x => x.IsSolved)</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div>
+        @*<div class="col-md-6">
+                <h4>总览</h4>
+                <div id="chartGeneral" class="ct-chart ct-perfect-fourth"></div>
+            </div>
+            <div class="col-md-3">
+                <h4>已解决</h4>
+                <div id="chartSolved" class="ct-chart ct-perfect-fourth"></div>
+            </div>
+            <div class="col-md-3">
+                <h4>未解决</h4>
+                <div id="chartUnsolved" class="ct-chart ct-perfect-fourth"></div>
+            </div>*@
+        <h4>维修前后故障设备统计图</h4>
+        <div id="chartGeneral" class="ct-chart ct-perfect-fourth"></div>
+    </div>
+
+    <script>
+    @*Chartist.Pie('#chartSolved', @Html.Raw(ViewBag.SolvedStatistics));
+    Chartist.Pie('#chartUnsolved', @Html.Raw(ViewBag.UnsolvedStatistics));*@
+
+    var dataGeneral = @Html.Raw(ViewBag.GeneralStatistics);
+
+    var options = {
+        seriesBarDistance: 10,
+        axisX: {
+            showGrid: false
+        },
+        height: "215px"
+    };
+
+    var responsiveOptions = [
+      ['screen and (max-width: 640px)', {
+          seriesBarDistance: 5,
+          axisX: {
+              labelInterpolationFnc: function (value) {
+                  return value[0];
+              }
+          }
+      }]
+    ];
+    Chartist.Bar('#chartGeneral', dataGeneral, options, responsiveOptions);
+    setTimeout(function(){ 
+        window.print(); 
+    }, 1000);
+    </script>
+</body>
+</html>

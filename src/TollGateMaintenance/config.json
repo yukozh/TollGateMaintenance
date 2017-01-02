@@ -1,0 +1,9 @@
+﻿{
+    "ConnectionStrings": {
+        "DefaultConnection": "server=localhost;database=TollGate;uid=root;pwd=123456"
+    },
+    "Ltp": {
+        "Host": "http://api.ltp-cloud.com",
+        "Key": "69Y3q7N5uewNXpjipJ2iaJpTYtAY2fIf1QOphyED"
+    }
+}

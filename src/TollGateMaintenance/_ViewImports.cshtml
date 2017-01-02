@@ -1,0 +1,17 @@
+﻿@using TollGateMaintenance.Models
+@using TollGateMaintenance.Lib
+@using Microsoft.AspNetCore.Http
+@inject Microsoft.AspNetCore.Identity.SmartUser<TollGateMaintenance.Models.User, string> User
+@inject Microsoft.AspNetCore.Identity.SignInManager<User> Sign
+@functions {
+    public void CheckRole()
+    {
+        if (Context.Request.Path != "/User/Login" && User.Current == null)
+        {
+            Context.Response.Redirect("/User/Login");
+        }
+    }
+}
+@{ 
+    Layout = "~/_Layout.cshtml";
+}
