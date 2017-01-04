@@ -19,6 +19,7 @@
         <col />
         <col />
         <col />
+        <col style="width: 60px;" />
         <col />
         <col />
         <col style="width: 300px" />
@@ -29,6 +30,7 @@
             <th>状态</th>
             <th>设备名称</th>
             <th>车道/位置</th>
+            <th>设备数</th>
             <th>现象</th>
             <th>解决方案</th>
             <th>原始数据</th>
@@ -47,6 +49,7 @@
                 </td>
                 <td><input type="text" name="device" value="@x.Name" class="form-control" /></td>
                 <td><input type="text" name="lane" value="@x.Lane" class="form-control" /></td>
+                <td><input type="text" name="count" value="@x.Count" class="form-control" /></td>
                 <td><input type="text" name="phenomenon" value="@x.Phenomenon" class="form-control" /></td>
                 <td><input type="text" name="solution" value="@x.Solution" class="form-control" /></td>
                 <td>@x.Raw <input type="hidden" name="raw" value="@x.Raw" /></td>
@@ -59,6 +62,7 @@
             <td>
                 <a class="btn btn-fill btn-primary" href="#" style="margin-left:8px" onclick="editReport('@Model.Id')">保存</a>
             </td>
+            <td></td>
             <td></td>
             <td></td>
             <td></td>

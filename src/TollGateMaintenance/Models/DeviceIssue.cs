@@ -13,6 +13,8 @@ namespace TollGateMaintenance.Models
 
         public string Phenomenon { get; set; }
 
+        public int Count { get; set; } = 1;
+
         public string Solution { get; set; }
 
         public bool IsSolved { get; set; }

@@ -76,6 +76,7 @@ namespace TollGateMaintenance.Lib
             }
             for (var i = 0; i < ret.Count; i++)
             {
+                ret[i] = ret[i].Trim();
                 // 处理顿号
                 if (ret[i].IndexOf('、') >= 0 && ret[i].IndexOf('、') <= 8)
                 {
@@ -146,6 +147,7 @@ namespace TollGateMaintenance.Lib
             }
             for (var i = 0; i < ret.Count; i++)
             {
+                ret[i] = ret[i].Trim();
                 // 处理顿号
                 if (ret[i].IndexOf('、') >= 0 && ret[i].IndexOf('、') <= 8)
                 {

@@ -17,6 +17,7 @@
     {
         reports = reports.Where(x => x.TollGate.Contains(tollgate) || tollgate.Contains(x.TollGate));
     }
+    reports = reports.OrderByDescending(x => x.Time);
     var count = reports.Count();
     var page_count = Convert.ToInt32((count + 50 - 1) / 50);
     var data = reports.Skip((p - 1) * 50).Take(50).ToList();

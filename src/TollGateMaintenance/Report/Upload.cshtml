@@ -21,6 +21,22 @@
     }
 </style>
 
+<div class="modal fade" id="modalWord" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">关闭</span></button>
+                <h4 class="modal-title" id="myModalLabel">原始文档</h4>
+            </div>
+            <div class="modal-body row" id="docCont" style="max-height:500px;overflow:auto;width:100%;margin:15px;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="col-md-10" style="display:none">
     <div class="card">
         <div class="header">
@@ -80,7 +96,7 @@
                 $('.uploading').hide();
                 ShowList();
                 for (var i = 0; i < result.length; i++) {
-                    var html = '<div class="doc-outer" data-id="' + result[i].Id + '"><form action="/Report/Edit/' + result[i].Id + '"><div class="row doc-title"><div class="col-md-1">文件名</div><div class="col-md-3">' + result[i].FileName + '</div><div class="col-md-1">管理处</div><div class="col-md-3"><input type="text" name="management" class="form-control" value="' + result[i].Management + '" /></div><div class="col-md-1">收费站</div><div class="col-md-3"><input type="text" name="tollgate" class="form-control" value="' + result[i].TollGate + '" /></div></div></form><div class="progress-outer"><div class="progress"><div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div></div><p><label>系统正在分析此文档，请稍候。</label></p></div></div>';
+                    var html = '<div class="doc-outer" data-id="' + result[i].Id + '"><form action="/Report/Edit/' + result[i].Id + '"><div class="row doc-title"><div class="col-md-1">文件名</div><div class="col-md-3"><a href="javascript:showOriginalDoc(\'' + result[i].Id + '\');">' + result[i].FileName + '</a></div><div class="col-md-1">管理处</div><div class="col-md-3"><input type="text" name="management" class="form-control" value="' + result[i].Management + '" /></div><div class="col-md-1">收费站</div><div class="col-md-3"><input type="text" name="tollgate" class="form-control" value="' + result[i].TollGate + '" /></div></div></form><div class="progress-outer"><div class="progress"><div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div></div><p><label>系统正在分析此文档，请稍候。</label></p></div></div>';
                     $('#lstDocuments').append(html);
                 }
             },
@@ -122,7 +138,7 @@
 
     function addRow(dom)
     {
-        $(dom).parents('table').children('tbody').append('<tr class="unsolved"><td><select name="issolved" class="form-control" onchange="statusChanged(this)"><option value="true">已解决</option><option value="false" selected>未解决</option></select></td><td><input type="text" name="device" class="form-control" /></td><td><input type="text" name="lane" class="form-control" /></td><td><input type="text" name="phenomenon" class="form-control" /></td><td><input type="text" name="solution" class="form-control" /></td><td>-<input type="hidden" name="raw"></td><td><a href="#" class="btn btn-danger btn-xs" onclick="removeIssue(this)">删除</a></td></tr>');
+        $(dom).parents('table').children('tbody').append('<tr class="unsolved"><td><select name="issolved" class="form-control" onchange="statusChanged(this)"><option value="true">已解决</option><option value="false" selected>未解决</option></select></td><td><input type="text" name="device" class="form-control" /></td><td><input type="text" name="lane" class="form-control" /></td><td><input type="text" name="count" class="form-control" value="1" /></td><td><input type="text" name="phenomenon" class="form-control" /></td><td><input type="text" name="solution" class="form-control" /></td><td>-<input type="hidden" name="raw"></td><td><a href="#" class="btn btn-danger btn-xs" onclick="removeIssue(this)">删除</a></td></tr>');
     }
 
     function editReport(id)
@@ -136,6 +152,13 @@
                     HideList();
                 }
             }, 300);
+        });
+    }
+
+    function showOriginalDoc(id) {
+        $.get('/Report/Doc/' + id, {}, function (html) {
+            $('#docCont').html(html);
+            $('#modalWord').modal('show');
         });
     }
 </script>

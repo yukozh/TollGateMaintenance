@@ -78,7 +78,7 @@
                 @foreach (var x in Model.Issues.Object)
                 {
                     <tr>
-                        <td>@x.Name</td>
+                        <td>@x.Name@(x.Count > 1 ? $"({ x.Count })" : "")</td>
                         <td>@x.Lane</td>
                         <td>@x.Phenomenon</td>
                         <td>@x.Solution</td>
@@ -116,17 +116,17 @@
                     }
                     <tr>
                         <td>@x.Key</td>
-                        <td>@x.Count()</td>
-                        <td>@x.Count(y => !y.IsSolved)</td>
-                        <td>@x.Count(y => y.IsSolved)</td>
+                        <td>@x.Sum(y => y.Count)</td>
+                        <td>@x.Where(y => !y.IsSolved).Sum(y => y.Count)</td>
+                        <td>@x.Where(y => y.IsSolved).Sum(y => y.Count)</td>
                         <td>@string.Join("；", tmp)</td>
                     </tr>
                 }
                 <tr>
                     <td>合计</td>
-                    <td>@Model.Issues.Object.Count()</td>
-                    <td>@Model.Issues.Object.Count(x => !x.IsSolved)</td>
-                    <td>@Model.Issues.Object.Count(x => x.IsSolved)</td>
+                    <td>@Model.Issues.Object.Sum(x => x.Count)</td>
+                    <td>@Model.Issues.Object.Where(x => !x.IsSolved).Sum(x => x.Count)</td>
+                    <td>@Model.Issues.Object.Where(x => x.IsSolved).Sum(x => x.Count)</td>
                     <td></td>
                 </tr>
             </tbody>

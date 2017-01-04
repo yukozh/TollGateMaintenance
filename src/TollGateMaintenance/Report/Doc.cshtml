@@ -1,0 +1,10 @@
+﻿@route "/Report/Doc/{id:Guid}"
+@inject TollGateMaintenance.Models.TgmContext DB
+@functions{
+    public Guid id { get; set; }
+}
+@{ 
+    Layout = null;
+    var report = DB.Reports.Single(x => x.Id == id);
+}
+@Html.Raw(report.RawHtml)

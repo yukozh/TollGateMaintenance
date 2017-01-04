@@ -18,9 +18,9 @@
         .Select(x => new
         {
             Management = x.Key,
-            TotalDevice = x.Sum(y => y.Issues.Object.Count()),
-            FixedDevice = x.Sum(y => y.Issues.Object.Count(z => z.IsSolved)),
-            Unsolved = x.Sum(y => y.Issues.Object.Count(z => !z.IsSolved))
+            TotalDevice = x.Sum(y => y.Issues.Object.Sum(z => z.Count)),
+            FixedDevice = x.Sum(y => y.Issues.Object.Where(z => z.IsSolved).Sum(z => z.Count)),
+            Unsolved = x.Sum(y => y.Issues.Object.Where(z => !z.IsSolved).Sum(z => z.Count))
         });
 }
 

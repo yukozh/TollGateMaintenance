@@ -50,7 +50,7 @@ namespace TollGateMaintenance.Lib
 
     public static class NlpHelper
     {
-        private static string[] Devices = new string[] { "自动栏杆机", "自动栏杆", "票据打印机", "票据打印", "对讲主机", "对讲分机", "对讲机", "对讲", "计重", "雾灯", "通信信号灯", "费额显示器", "费额显示", "费显", "摄像机", "交换机", "光端机", "服务器", "工作站", "车牌识别", "编解码器", "编码器", "解码器", "视频存储", "车牌识别", "地秤", "监视器", "显示器", "字符叠加器", "字符叠加", "图像", "字符", "人井", "电视墙" };
+        private static string[] Devices = new string[] { "自动栏杆机", "自动栏杆", "票据打印机", "票据打印", "打印机", "对讲主机", "对讲分机", "对讲机", "对讲", "计重", "雾灯", "通信信号灯", "费额显示器", "费额显示", "费显", "摄像机", "摄像", "交换机", "光端机", "服务器", "工作站", "车牌识别", "编解码器", "编码器", "解码器", "视频存储", "车牌识别", "地秤", "监视器", "显示器", "字符叠加器", "字符叠加", "图像", "字符", "人井", "电视墙", "稳压电源", "配电柜", "雨棚灯", "镜头", "稳压电源", "电源" };
 
         private static string[] AdditionalLane = new string[] { "票证室", "监控室" };
 
@@ -208,10 +208,12 @@ namespace TollGateMaintenance.Lib
             {
                 if (src.Contains(x))
                 {
-                    if (x == "图像")
+                    if (x == "图像" || x == "镜头" || x == "摄像")
                         return "摄像机";
                     else if (x == "费额显示器")
                         return "费显";
+                    else if (x == "打印机")
+                        return "票据打印机";
                     else
                         return x;
                 }
@@ -265,12 +267,13 @@ namespace TollGateMaintenance.Lib
                 var obj2 = obj1;
                 if (obj1.Count == 1)
                     obj2  = await CallApiUntilSucceeded(x.Replace(lane, ""));
-                foreach (var y in obj2)
+                for (var i = 0; i < obj2.Count(); i++)
                 {
+                    var y = obj2[i];
                     var s = new DeviceIssue
                     {
                         Lane = lane,
-                        Name = GetDevice(y),
+                        Name = obj1.Count == obj2.Count ? GetDevice(obj1[i]) : GetDevice(obj2[i]),
                         IsSolved = true,
                         Solution = GetSolution(y),
                         Phenomenon = GetPhenomenon(y),
@@ -298,12 +301,14 @@ namespace TollGateMaintenance.Lib
                 var obj2 = obj1;
                 if (obj1.Count == 1)
                     obj2 = await CallApiUntilSucceeded(x.Replace(lane, ""));
-                foreach (var y in obj2)
+
+                for (var i = 0; i < obj2.Count(); i++)
                 {
+                    var y = obj2[i];
                     var s = new DeviceIssue
                     {
                         Lane = lane,
-                        Name = GetDevice(y),
+                        Name = obj1.Count == obj2.Count ? GetDevice(obj1[i]) : GetDevice(obj2[i]),
                         IsSolved = false,
                         Solution = GetSolution(y, true),
                         Phenomenon = GetPhenomenon(y),
@@ -312,6 +317,7 @@ namespace TollGateMaintenance.Lib
                     s.Phenomenon = PatchPhenomenon(s, string.Join("", y.Select(z => z.cont)));
                     ret.Add(s);
                 }
+                
                 hub.Clients.All.OnAnalyzeProcessChanged(id, (float)current++ / total);
             }
             return ret;
