@@ -65,89 +65,105 @@ namespace TollGateMaintenance.Lib
 
         private static string GetLane(IEnumerable<NlpReturn> src)
         {
-            var total = string.Join("", src.Select(x => x.cont));
-            foreach (var x in AdditionalLane)
-                if (total.IndexOf(x) >= 0)
-                    return x;
-            var tmp = src.Take(3).ToList();
-            tmp = tmp.Where(x => x.pos == "v" || x.pos == "n" || x.pos == "m").ToList();
+            try
+            {
+                var total = string.Join("", src.Select(x => x.cont));
+                foreach (var x in AdditionalLane)
+                    if (total.IndexOf(x) >= 0)
+                        return x;
+                var tmp = src.Take(3).ToList();
+                tmp = tmp.Where(x => x.pos == "v" || x.pos == "n" || x.pos == "m").ToList();
 
-            // v/n+m 或 m + n形式
-            if (tmp.Any(x => x.pos == "m") && tmp.Count >= 2)
-            {
-                var index = tmp.IndexOf(tmp.First(x => x.pos == "m")) - 1;
-                if (index >= 0 && ((tmp[index].pos == "v" && tmp[index].cont == "出口") || tmp[index].pos == "n")) // 分词系统错误将出口划分为动词
-                    return tmp[index].cont + tmp[index + 1].cont;
-                index++;
-                if (index + 1 < tmp.Count && tmp[index].pos == "m" && tmp[index + 1].pos == "n")
-                    return tmp[index].cont + tmp[index + 1].cont;
-            }
-            //v/n + n 形式
-            if (tmp.Any(x => x.pos == "n") && tmp.Count >= 2)
-            {
-                var index = 0; //tmp.LastIndexOf(tmp.Last(x => x.pos == "n")) - 1;
-                var matched_nn_or_vn = false;
-                if ((tmp[0].pos == "v" && tmp[0].cont == "出口" && tmp[1].pos == "n") || (tmp[0].pos == "n" && tmp[1].pos == "n"))
+                // v/n+m 或 m + n形式
+                if (tmp.Any(x => x.pos == "m") && tmp.Count >= 2)
                 {
-                    index = 0;
-                    matched_nn_or_vn = true;
+                    var index = tmp.IndexOf(tmp.First(x => x.pos == "m")) - 1;
+                    if (index >= 0 && ((tmp[index].pos == "v" && tmp[index].cont == "出口") || tmp[index].pos == "n")) // 分词系统错误将出口划分为动词
+                        return tmp[index].cont + tmp[index + 1].cont;
+                    index++;
+                    if (index + 1 < tmp.Count && tmp[index].pos == "m" && tmp[index + 1].pos == "n")
+                        return tmp[index].cont + tmp[index + 1].cont;
                 }
-                if (!matched_nn_or_vn && tmp.Count == 3)
+                //v/n + n 形式
+                if (tmp.Any(x => x.pos == "n") && tmp.Count >= 2)
                 {
-                    if ((tmp[1].pos == "v" && tmp[1].cont == "出口" && tmp[2].pos == "n") || (tmp[1].pos == "n" && tmp[2].pos == "n"))
+                    var index = 0; //tmp.LastIndexOf(tmp.Last(x => x.pos == "n")) - 1;
+                    var matched_nn_or_vn = false;
+                    if ((tmp[0].pos == "v" && tmp[0].cont == "出口" && tmp[1].pos == "n") || (tmp[0].pos == "n" && tmp[1].pos == "n"))
                     {
-                        index = 1;
+                        index = 0;
                         matched_nn_or_vn = true;
                     }
-                }
-                if (matched_nn_or_vn)
-                {
-                    var num = tmp[index + 1].cont;
-                    foreach (var x in Devices)
+                    if (!matched_nn_or_vn && tmp.Count == 3)
                     {
-                        num = num.Replace(x, "");
+                        if ((tmp[1].pos == "v" && tmp[1].cont == "出口" && tmp[2].pos == "n") || (tmp[1].pos == "n" && tmp[2].pos == "n"))
+                        {
+                            index = 1;
+                            matched_nn_or_vn = true;
+                        }
                     }
-                    return tmp[index].cont + num;
+                    if (matched_nn_or_vn)
+                    {
+                        var num = tmp[index + 1].cont;
+                        foreach (var x in Devices)
+                        {
+                            num = num.Replace(x, "");
+                        }
+                        return tmp[index].cont + num;
+                    }
                 }
+
+                // 去动词
+                tmp = tmp.Where(x => x.pos != "v" && x.cont != "出口").ToList();
+
+                // 两个连续名词去第二个
+                if (tmp.Count >= 2 && tmp.Count(x => x.pos == "n") >= 0)
+                {
+                    var last_n = tmp.Last(x => x.pos == "n");
+                    var index = tmp.IndexOf(last_n);
+                    if (index - 1 >= 0 && tmp[index - 1].pos == "n")
+                        tmp.Remove(last_n);
+                }
+
+                var ret = string.Join("", tmp.Select(x => x.cont));
+                return string.IsNullOrWhiteSpace(ret) ? "未指定" : ret;
             }
-
-            // 去动词
-            tmp = tmp.Where(x => x.pos != "v" && x.cont != "出口").ToList();
-
-            // 两个连续名词去第二个
-            if (tmp.Count >= 2 && tmp.Count(x => x.pos == "n") >= 0)
+            catch (Exception e)
             {
-                var last_n = tmp.Last(x => x.pos == "n");
-                var index = tmp.IndexOf(last_n);
-                if (index - 1 >= 0 && tmp[index - 1].pos == "n")
-                    tmp.Remove(last_n);
+                Console.WriteLine(e.ToString());
+                return "未指定";
             }
-
-            var ret = string.Join("", tmp.Select(x => x.cont));
-            return string.IsNullOrWhiteSpace(ret) ? "未指定" : ret;
         }
 
         private static string GetDevice(IEnumerable<NlpReturn> src)
         {
-            var tmp = string.Join("", src.Select(x => x.cont));
-            var ret = GetDeviceNameFromDictionary(tmp);
-            if (ret != null)
-                return ret;
-            var lane = GetLane(src);
-            if (lane != "未指定" && src.Any(x => x.arg.Any(y => y.type == "A0")))
+            try
             {
-                var a0 = src.SelectMany(x => x.arg).Where(x => x.type == "A0");
-                foreach (var x in a0)
+                var tmp = string.Join("", src.Select(x => x.cont));
+                var ret = GetDeviceNameFromDictionary(tmp);
+                if (ret != null)
+                    return ret;
+                var lane = GetLane(src);
+                if (lane != "未指定" && src.Any(x => x.arg.Any(y => y.type == "A0")))
                 {
-                    var tmp2 = string.Join("", src.Where(y => y.id >= x.beg && y.id <= x.end).Select(y => y.cont));
-                    if (tmp2.Contains(lane))
+                    var a0 = src.SelectMany(x => x.arg).Where(x => x.type == "A0");
+                    foreach (var x in a0)
                     {
-                        return tmp2.Replace(lane, "|").Split('|')[1];
+                        var tmp2 = string.Join("", src.Where(y => y.id >= x.beg && y.id <= x.end).Select(y => y.cont));
+                        if (tmp2.Contains(lane))
+                        {
+                            return tmp2.Replace(lane, "|").Split('|')[1];
+                        }
+                        return tmp2;
                     }
-                    return tmp2;
                 }
+                return "未知设备";
             }
-            return "未知设备";
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                return "未知设备";
+            }
         }
 
         private static string GetSolutionByTmp(IEnumerable<NlpReturn> src)
@@ -162,14 +178,22 @@ namespace TollGateMaintenance.Lib
 
         private static string GetPhenomenon(IEnumerable<NlpReturn> src)
         {
-            var tmp = src.Where(x => x.arg.Any(y => y.type == "A1") && (x.pos == "v" || x.pos == "p")).LastOrDefault();
-            if (tmp == null)
+            try
+            {
+                var tmp = src.Where(x => x.arg.Any(y => y.type == "A1") && (x.pos == "v" || x.pos == "p")).LastOrDefault();
+                if (tmp == null)
+                    return "故障";
+                var begin = Math.Min(tmp.arg.Where(x => x.type == "A1").Min(x => x.beg), tmp.id);
+                var end = Math.Max(tmp.arg.Where(x => x.type == "A1").Max(x => x.end), tmp.id);
+                if (begin - 1 > 0 && src.ElementAt(begin - 1).sem.Any(x => x.relate == "mNeg"))
+                    begin = begin - 1;
+                return string.Join("", src.Where(x => x.id >= begin && x.id <= end).Select(x => x.cont));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
                 return "故障";
-            var begin = Math.Min(tmp.arg.Where(x => x.type == "A1").Min(x => x.beg), tmp.id);
-            var end = Math.Max(tmp.arg.Where(x => x.type == "A1").Max(x => x.end), tmp.id);
-            if (begin - 1 > 0 && src.ElementAt(begin - 1).sem.Any(x => x.relate == "mNeg"))
-                begin = begin - 1;
-            return string.Join("", src.Where(x => x.id >= begin && x.id <= end).Select(x => x.cont));
+            }
         }
 
         private static string GetSolutionBydContOrmMod(IEnumerable<NlpReturn> src, bool Unsolved = false)
@@ -193,13 +217,24 @@ namespace TollGateMaintenance.Lib
 
         public static string GetSolution(IEnumerable<NlpReturn> src, bool Unsolved = false)
         {
-            var tmp = GetSolutionByTmp(src);
-            if (string.IsNullOrEmpty(tmp))
-                tmp = GetSolutionBydContOrmMod(src);
-            if (Unsolved)
-                return string.IsNullOrEmpty(tmp) ? "未解决" : tmp;
-            else
-                return string.IsNullOrEmpty(tmp) ? "已解决" : tmp;
+            try
+            {
+                var tmp = GetSolutionByTmp(src);
+                if (string.IsNullOrEmpty(tmp))
+                    tmp = GetSolutionBydContOrmMod(src);
+                if (Unsolved)
+                    return string.IsNullOrEmpty(tmp) ? "未解决" : tmp;
+                else
+                    return string.IsNullOrEmpty(tmp) ? "已解决" : tmp;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                if (Unsolved)
+                    return "未解决";
+                else
+                    return "已解决";
+            }
         }
         
         private static string GetDeviceNameFromDictionary(string src)
